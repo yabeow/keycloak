@@ -65,6 +65,10 @@ public class MicrosoftIdentityProviderFactory extends AbstractIdentityProviderFa
                 .label("Tenant ID")
                 .helpText("Uses single-tenant auth endpoints when specified, uses 'common' multi-tenant endpoints otherwise.")
                 .type(ProviderConfigProperty.STRING_TYPE).add()
+                .property().name("userInfoUrl")
+                .label("User Info URL")
+                .helpText("API endpoint to fetch user information. Default value: https://graph.microsoft.com/v1.0/me/.")
+                .type(ProviderConfigProperty.STRING_TYPE).add()
                 .build();
     }
 }
