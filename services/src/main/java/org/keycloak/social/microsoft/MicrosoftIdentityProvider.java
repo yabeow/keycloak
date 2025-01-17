@@ -46,7 +46,11 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
 
     private static final String AUTH_URL_TEMPLATE = "https://login.microsoftonline.com/%s/oauth2/v2.0/authorize"; // authorization code endpoint
     private static final String TOKEN_URL_TEMPLATE = "https://login.microsoftonline.com/%s/oauth2/v2.0/token"; // token endpoint
-    private static final String PROFILE_URL = "https://graph.microsoft.com/v1.0/me/"; // user profile service endpoint
+
+    // By default, this endpoint only returns a default set of properties: <a href="https://learn.microsoft.com/en-us/graph/api/resources/users?view=graph-rest-1.0#common-properties">Common properties</a>
+    // To access more properties, use https://graph.microsoft.com/v1.0/me/?$select=[PROPERTIES_HERE]
+    // See the list of all avaiable properties at: <a href="https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties">User properties</a>
+    private static final String DEFAULT_USER_INFO_URL = "https://graph.microsoft.com/v1.0/me/";
     private static final String DEFAULT_SCOPE = "User.read"; // the User.read scope should be sufficient to obtain all necessary user info
 
     public MicrosoftIdentityProvider(KeycloakSession session, MicrosoftIdentityProviderConfig config) {
@@ -57,7 +61,11 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
 
         config.setAuthorizationUrl(String.format(AUTH_URL_TEMPLATE, tenant));
         config.setTokenUrl(String.format(TOKEN_URL_TEMPLATE, tenant));
-        config.setUserInfoUrl(PROFILE_URL);
+
+        // Use default user info endpoint if not specified.
+        if (config.getUserInfoUrl() == null || config.getUserInfoUrl() == "") {
+            config.setUserInfoUrl(DEFAULT_USER_INFO_URL);
+        }
     }
 
     @Override
@@ -67,13 +75,13 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
 
     @Override
     protected String getProfileEndpointForValidation(EventBuilder event) {
-        return PROFILE_URL;
+        return this.getConfig().getUserInfoUrl();
     }
 
     @Override
     protected BrokeredIdentityContext doGetFederatedIdentity(String accessToken) {
         try {
-            JsonNode profile = SimpleHttp.doGet(PROFILE_URL, session).auth(accessToken).asJson();
+            JsonNode profile = SimpleHttp.doGet(this.getConfig().getUserInfoUrl(), session).auth(accessToken).asJson();
             if (profile.has("error") && !profile.get("error").isNull()) {
                 throw new IdentityBrokerException("Error in Microsoft Graph API response. Payload: " + profile.toString());
             }
